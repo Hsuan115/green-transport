@@ -12,7 +12,7 @@
 <nav class="navbar navbar-dark bg-success shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="main.html">🌱 碳足跡主畫面大廳</a>
-        <a href="login.html" class="btn btn-outline-light btn-sm">安全登出</a>
+        <a href="login.html" class="btn btn-outline-light btn-sm">登出</a>
     </div>
 </nav>
 
@@ -51,15 +51,25 @@
         const ctx = document.getElementById('mainChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'bar',
-            data: { labels: ['5/25', '5/26', '今日'], datasets: [{ label: '碳排放 (kg)', data: [1.2, 2.5, 1.8], backgroundColor: '#2e7d32' }] },
+            data: { 
+                labels: [], // 留空 動態填入日期
+                datasets: [{ 
+                    label: '碳排放 (kg)', 
+                    data: [], // 留空，動態填入碳排放數字
+                    backgroundColor: '#2e7d32' 
+                }] 
+            },
             options: { responsive: true, maintainAspectRatio: false }
         });
     };
+
+    // 負責切換每日、每週、每月的函數
     function changeData() {
         const val = document.getElementById('rangeSelect').value;
-        if(val === 'd') { chart.data.labels = ['5/25', '5/26', '今日']; chart.data.datasets[0].data = [1.2, 2.5, 1.8]; }
-        else if(val === 'w') { chart.data.labels = ['第1週', '第2週', '第3週']; chart.data.datasets[0].data = [12, 15, 9]; }
-        else if(val === 'm') { chart.data.labels = ['三月', '四月', '五月']; chart.data.datasets[0].data = [55, 48, 52]; }
+
+
+        
+        
         chart.update();
     }
 </script>
