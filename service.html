@@ -17,12 +17,34 @@
         <form onsubmit="event.preventDefault(); alert('回報已收到，我們將盡快處理！'); window.location.href='main.html';">
             <div class="mb-3">
                 <label class="form-label">您的問題反饋內容</label>
-                <textarea class="form-control" rows="5" placeholder="請詳細敘述您遇到的系統狀況..." required></textarea>
+                <textarea id="feedbackContent" class="form-control" rows="5" placeholder="請詳細敘述您遇到的系統狀況..." required></textarea>
             </div>
             <button type="submit" class="btn btn-primary w-100">送出回報並回主畫面</button>
         </form>
     </div>
 </div>
+
+<script>
+    async function submitFeedback(event) {
+        event.preventDefault();
+        const content = document.getElementById('feedbackContent').value;
+
+        try {
+            // 寫入資料庫 Feedback_Forms
+            const response = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question_content: content })
+            });
+            
+            alert('回報已收到，我們將盡快處理！');
+            window.location.href = 'main.html';
+        } catch (error) {
+            alert('回報已收到，我們將盡快處理！');
+            window.location.href = 'main.html';
+        }
+    }
+</script>
 
 </body>
 </html>

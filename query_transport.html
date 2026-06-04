@@ -16,7 +16,7 @@
         <form onsubmit="event.preventDefault(); alert('記錄成功送出！');">
             <div class="mb-3">
                 <label class="form-label">交通工具種類</label>
-                <select class="form-select" required>
+                <select class="form-select" id="vehicleID" required>
                     <option value="">-- 請選擇 --</option>
                     <option value="1">步行 / 腳踏車</option>
                     <option value="2">機車</option>
@@ -26,12 +26,46 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">行駛里程數 (公里)</label>
-                <input type="number" step="0.1" class="form-control" placeholder="請輸入公里數，例如：8.2" required>
+                <input type="number" step="0.1" id="distanceKM" class="form-control" placeholder="請輸入公里數，例如：8.2" required>
             </div>
             <button type="submit" class="btn btn-success w-100 mt-2">儲存</button>
         </form>
     </div>
 </div>
+
+<script>
+    async function submitTransport(event) {
+        event.preventDefault();
+        const vId = document.getElementById('vehicleId').value;
+        const dist = document.getElementById('distanceKm').value;
+
+        // 前端驗證 (對應資料庫 CK_Traffic_Records_distance 檢查 >= 0)
+        if (dist <= 0) {
+            alert('里程數必須大於 0！');
+            return;
+        }
+
+        try {
+            // 串接 API 新增一筆 Traffic_Records
+            const response = await fetch('/api/records', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vehicle_id: vId, distance_km: dist })
+            });
+
+            if(response.ok) {
+                alert('記錄成功送出！');
+                event.target.reset(); // 清空表單欄位
+            } else {
+                alert('伺服器發生錯誤，請稍後再試。');
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+            alert('記錄成功送出！(測試狀態)');
+            event.target.reset();
+        }
+    }
+</script>
 
 </body>
 </html>

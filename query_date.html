@@ -38,10 +38,49 @@
         document.getElementById('start').value = `${y}-${m}-01`; // 當月1號
         document.getElementById('end').value = `${y}-${m}-${d}`;    // 今天
     };
-    function doQuery() {
+    async function doQuery() {
         const s = document.getElementById('start').value;
         const e = document.getElementById('end').value;
-        document.getElementById('res').innerHTML = `<div class="alert alert-info">正在為您撈取自 ${s} 到 ${e} 的歷史排碳總資料...</div>`;
+        const resDiv = document.getElementById('res');
+
+        // 前端驗證
+        if (!s || !e) {
+            alert('請選擇完整的開始與結束日期！');
+            return;
+        }
+        if (new Date(s) > new Date(e)) {
+            alert('開始日期不能大於結束日期！');
+            return;
+        }
+
+        resDiv.innerHTML = `<div class="alert alert-info">正在為您撈取自 ${s} 到 ${e} 的歷史排碳資料...</div>`;
+
+        try {
+            // 串接 API 取得 Traffic_Records 資料
+            const response = await fetch(`/api/records/date-range?start=${s}&end=${e}`);
+            const data = await response.json(); // 假設回傳格式包含 totalEmission 與 records 陣列
+            
+            // 顯示查詢結果與表格
+            let html = `<div class="alert alert-success">查詢成功！該期間總碳排放量為：<strong>${data.totalEmission} kg</strong></div>`;
+            html += `<table class="table table-bordered table-striped text-center">
+                        <thead class="table-success">
+                            <tr><th>日期</th><th>交通工具</th><th>里程(km)</th><th>碳排(kg)</th></tr>
+                        </thead><tbody>`;
+            
+            if(data.records && data.records.length > 0) {
+                data.records.forEach(r => {
+                    html += `<tr><td>${r.usage_date}</td><td>${r.vehicle_name}</td><td>${r.distance_km}</td><td>${r.carbon_emission}</td></tr>`;
+                });
+            } else {
+                html += `<tr><td colspan="4" class="text-muted">此區間查無資料</td></tr>`;
+            }
+            html += `</tbody></table>`;
+            resDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error('API Error:', error);
+            resDiv.innerHTML = `<div class="alert alert-danger">資料載入失敗，或後端未啟動。</div>`;
+        }
     }
 </script>
 </body>

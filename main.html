@@ -61,16 +61,42 @@
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
+
+        changeData();
     };
 
     // 負責切換每日、每週、每月的函數
-    function changeData() {
+    async function changeData() {
         const val = document.getElementById('rangeSelect').value;
 
+        try {
+            // 串接 API，將時間維度參數送給後端
+            const response = await fetch(`/api/chart-data?range=${val}`);
+            const data = await response.json(); // 預期回傳 { labels: [...], emissions: [...] }
 
+            // 更新 Chart.js 資料
+            chart.data.labels = data.labels;
+            chart.data.datasets[0].data = data.emissions;
+            
+            // 依據時間動態改變圖例名稱
+            const labelsMap = { 'd': '每日碳排放 (kg)', 'w': '每週碳排放 (kg)', 'm': '每月碳排放 (kg)' };
+            chart.data.datasets[0].label = labelsMap[val];
+
+            chart.update(); // 重繪圖表
+        } catch (error) {
+            console.error('API Error:', error);
+            
+            // ⚠️ 在尚未建置後端 API 時的模擬(Mock)備用數據顯示
+            const mockData = {
+                'd': { labels: ['週一', '週二', '週三', '週四', '週五'], emissions: [1.2, 0.5, 2.3, 0.8, 3.1] },
+                'w': { labels: ['第1週', '第2週', '第3週', '第4週'], emissions: [15.5, 12.0, 18.2, 10.4] },
+                'm': { labels: ['一月', '二月', '三月', '四月', '五月'], emissions: [45.2, 50.1, 42.0, 38.5, 40.0] }
+            };
+            chart.data.labels = mockData[val].labels;
+            chart.data.datasets[0].data = mockData[val].emissions;
+            chart.update();
+        }
         
-        
-        chart.update();
     }
 </script>
 </body>
