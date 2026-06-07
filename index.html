@@ -2,7 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>個人交通碳足跡系統 - 登入/註冊</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人交通碳足跡系統 - 登入</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -19,7 +20,7 @@
     <div class="tab-content">
         <div class="tab-pane fade show active" id="login-view">
             <form onsubmit="handleLogin(event)">
-                <div class="mb-3"><label class="form-label">帳號</label><input type="text" id="loginUser" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">使用者帳號</label><input type="text" id="loginUser" class="form-control" required></div>
                 <div class="mb-3"><label class="form-label">密碼</label><input type="password" id="loginPwd" class="form-control" required></div>
                 <button type="submit" class="btn btn-success w-100">立即登入</button>
             </form>
@@ -34,10 +35,19 @@
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    async function handleLogin(e) { e.preventDefault(); window.location.href='main.html'; }
-    async function handleRegister(e) { e.preventDefault(); alert('註冊成功！'); location.reload(); }
+    function handleLogin(e) {
+        e.preventDefault();
+        // 登入邏輯：直接跳轉到 main.html
+        window.location.href = 'main.html';
+    }
+    function handleRegister(e) {
+        e.preventDefault();
+        alert('註冊成功！請登入。');
+        location.reload(); // 重新整理回到登入狀態
+    }
 </script>
 </body>
 </html>
