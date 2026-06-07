@@ -1,71 +1,58 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>交通工具與里程紀錄</title>
+    <title>交通工具查詢</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-
-<div class="container mt-4">
-    <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
-
-    <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
-        <h4 class="fw-bold text-success mb-3">🚗 輸入交通工具與里程</h4>
-        <form onsubmit="event.preventDefault(); alert('記錄成功送出！');">
-            <div class="mb-3">
-                <label class="form-label">交通工具種類</label>
-                <select class="form-select" id="vehicleID" required>
-                    <option value="">-- 請選擇 --</option>
-                    <option value="1">步行 / 腳踏車</option>
-                    <option value="2">機車</option>
-                    <option value="3">汽車</option>
-                    <option value="4">大眾運輸 (公車/捷運)</option>
-                </select>
+    <div class="container mt-5">
+        <div class="card p-4 shadow-sm">
+            <h2>依交通工具查詢</h2>
+            <hr>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">交通工具：</label>
+                    <select id="transportType" class="form-select">
+                        <option value="捷運">捷運</option>
+                        <option value="公車">公車</option>
+                        <option value="火車">火車</option>
+                        <option value="機車">機車</option>
+                        <option value="汽車">汽車</option>
+                        <option value="步行">步行</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">開始日期：</label>
+                    <input type="date" id="startDate" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">結束日期：</label>
+                    <input type="date" id="endDate" class="form-control">
+                </div>
             </div>
-            <div class="mb-3">
-                <label class="form-label">行駛里程數 (公里)</label>
-                <input type="number" step="0.1" id="distanceKM" class="form-control" placeholder="請輸入公里數，例如：8.2" required>
-            </div>
-            <button type="submit" class="btn btn-success w-100 mt-2">儲存</button>
-        </form>
+            <button class="btn btn-success mt-4 w-100" onclick="queryData()">開始查詢</button>
+        </div>
     </div>
-</div>
 
-<script>
-    async function submitTransport(event) {
-        event.preventDefault();
-        const vId = document.getElementById('vehicleId').value;
-        const dist = document.getElementById('distanceKm').value;
-
-        // 前端驗證 (對應資料庫 CK_Traffic_Records_distance 檢查 >= 0)
-        if (dist <= 0) {
-            alert('里程數必須大於 0！');
-            return;
-        }
-
-        try {
-            // 串接 API 新增一筆 Traffic_Records
-            const response = await fetch('/api/records', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vehicle_id: vId, distance_km: dist })
-            });
-
-            if(response.ok) {
-                alert('記錄成功送出！');
-                event.target.reset(); // 清空表單欄位
-            } else {
-                alert('伺服器發生錯誤，請稍後再試。');
+    <script>
+        function queryData() {
+            // 取得使用者選擇的數據
+            const transport = document.getElementById('transportType').value;
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            
+            // 簡單檢查：如果沒填日期提示一下
+            if (!start || !end) {
+                alert("請務必選擇開始與結束日期！");
+                return;
             }
-        } catch (error) {
-            console.error('API Error:', error);
-            alert('記錄成功送出！(測試狀態)');
-            event.target.reset();
-        }
-    }
-</script>
 
+            console.log("準備發送給後端:", { transport, start, end });
+            // 未來這裡會用 fetch() 把這三個數據打包送給後端 API
+            alert("查詢條件已打包，等待後端串接中...");
+        }
+    </script>
 </body>
 </html>
