@@ -9,15 +9,55 @@
     <div class="container mt-5" style="max-width: 500px;">
         <div class="card p-4 shadow-sm">
             <h2 class="mb-4">➕ 新增碳排紀錄</h2>
+            
             <input type="date" id="recordDate" class="form-control mb-3">
+            
             <select id="transportType" class="form-select mb-3">
-                <option value="捷運">捷運</option><option value="公車">公車</option><option value="機車">機車</option>
-                <option value="汽車">汽車</option><option value="步行">步行</option><option value="火車">火車</option>
+                <option value="1">捷運</option>
+                <option value="2">公車</option>
+                <option value="3">機車</option>
+                <option value="4">汽車</option>
+                <option value="5">步行</option>
             </select>
+            
             <input type="number" id="distance" class="form-control mb-3" placeholder="行駛公里數 (km)">
-            <button class="btn btn-success w-100" onclick="alert('紀錄已儲存')">儲存紀錄</button>
+            
+            <button class="btn btn-success w-100" onclick="saveRecord()">儲存紀錄</button>
             <a href="main.html" class="btn btn-link w-100 mt-2">返回主頁</a>
         </div>
     </div>
+
+    <script>
+        async function saveRecord() {
+            // 1. 取得使用者輸入的值
+            const data = {
+                user_id: 1, // 暫時設為 1，之後串接登入後再改
+                vehicle_id: document.getElementById('transportType').value,
+                distance_km: document.getElementById('distance').value,
+                usage_date: document.getElementById('recordDate').value
+            };
+
+            // 2. 把資料傳給後端 (port 3000)
+            try {
+                const response = await fetch('http://127.0.0.1:3000/api/records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+
+                // 3. 根據後端回傳的結果顯示訊息
+                if (response.ok) {
+                    alert("儲存成功！碳排量：" + result.data.carbon_emission + " kg");
+                } else {
+                    alert("儲存失敗：" + result.error);
+                }
+            } catch (error) {
+                alert("無法連線至後端！請確保後端 app.py 有啟動喔！");
+                console.error(error);
+            }
+        }
+    </script>
 </body>
 </html>
