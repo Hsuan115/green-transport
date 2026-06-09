@@ -38,16 +38,29 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    function handleLogin(e) {
-        e.preventDefault();
-        // 登入邏輯：直接跳轉到 main.html
-        window.location.href = 'main.html';
+    async function handleLogin(e) {
+    e.preventDefault();
+    const user = document.getElementById('loginUser').value;
+    const pwd = document.getElementById('loginPwd').value;
+
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pwd })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.href = 'main.html';
+        } else {
+            alert("登入失敗：" + result.message);
+        }
+    } catch (err) {
+        alert("無法連線至後端，請檢查 app.py 是否已執行");
     }
-    function handleRegister(e) {
-        e.preventDefault();
-        alert('註冊成功！請登入。');
-        location.reload(); // 重新整理回到登入狀態
-    }
+}
 </script>
 </body>
 </html>
