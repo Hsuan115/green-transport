@@ -6,58 +6,117 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-    <div class="container mt-5" style="max-width: 500px;">
-        <div class="card p-4 shadow-sm">
-            <h2 class="mb-4">➕ 新增碳排紀錄</h2>
-            
-            <input type="date" id="recordDate" class="form-control mb-3">
-            
-            <select id="transportType" class="form-select mb-3">
-                <option value="1">捷運</option>
-                <option value="2">公車</option>
-                <option value="3">機車</option>
-                <option value="4">汽車</option>
-                <option value="5">步行</option>
-            </select>
-            
-            <input type="number" id="distance" class="form-control mb-3" placeholder="行駛公里數 (km)">
-            
-            <button class="btn btn-success w-100" onclick="saveRecord()">儲存紀錄</button>
-            <a href="main.html" class="btn btn-link w-100 mt-2">返回主頁</a>
-        </div>
+<div class="container mt-4">
+
+    <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
+
+    <div class="card p-4 shadow-sm mx-auto" style="max-width: 500px;">
+        <h4 class="fw-bold text-dark mb-4">➕ 新增碳排紀錄</h4>
+        
+        <label class="form-label text-muted small">紀錄日期</label>
+        <input type="date" id="recordDate" class="form-control mb-3">
+        
+        <label class="form-label text-muted small">交通工具</label>
+        <select id="transportType" class="form-select mb-3">
+            <option value="" disabled selected>載入中...</option>
+        </select>
+        
+        <label class="form-label text-muted small">行駛距離 (km)</label>
+        <input type="number" id="distance" class="form-control mb-4" placeholder="例如: 10.5">
+        
+        <button class="btn btn-primary w-100" onclick="saveRecord()">儲存紀錄</button>
     </div>
+</div>
 
-    <script>
-        async function saveRecord() {
-            // 1. 取得使用者輸入的值
-            const data = {
-                user_id: 1, // 暫時設為 1，之後串接登入後再改
-                vehicle_id: document.getElementById('transportType').value,
-                distance_km: document.getElementById('distance').value,
-                usage_date: document.getElementById('recordDate').value
-            };
 
-            // 2. 把資料傳給後端 (port 3000)
-            try {
-                const response = await fetch('http://127.0.0.1:3000/api/records', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+<script>
+    const API_BASE = 'http://127.0.0.1:3000/api';
+    const userId = localStorage.getItem('user_id');
+
+    window.onload = async function() {
+
+        // 2. 預設日期為今天
+        const today = new Date();
+        const y = today.getFullYear();
+        let m = String(today.getMonth() + 1).padStart(2, '0');
+        let d = String(today.getDate()).padStart(2, '0');
+        document.getElementById('recordDate').value = `${y}-${m}-${d}`;
+
+        // 3. 載入交通工具清單
+        await loadTransports();
+    };
+
+    // 從後端撈取所有交通工具
+    async function loadTransports() {
+        try {
+            const response = await fetch(`${API_BASE}/transports`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const select = document.getElementById('transportType');
+                select.innerHTML = '<option value="" disabled selected>請選擇交通工具</option>';
                 
-                const result = await response.json();
-
-                // 3. 根據後端回傳的結果顯示訊息
-                if (response.ok) {
-                    alert("儲存成功！碳排量：" + result.data.carbon_emission + " kg");
-                } else {
-                    alert("儲存失敗：" + result.error);
-                }
-            } catch (error) {
-                alert("無法連線至後端！請確保後端 app.py 有啟動喔！");
-                console.error(error);
+                result.transports.forEach(t => {
+                    select.innerHTML += `<option value="${t.vehicle_id}">${t.vehicle_name}</option>`;
+                });
             }
+        } catch (error) {
+            console.error("載入交通工具失敗:", error);
+            document.getElementById('transportType').innerHTML = '<option value="">載入失敗</option>';
         }
-    </script>
+    }
+
+    // 儲存紀錄至資料庫
+    async function saveRecord() {
+        // 驗證使用者是否已登入
+        const userId = localStorage.getItem('user_id');
+        if (!userId) {
+            if (confirm("您需要先登入帳號，才能執行這個操作喔！\n按「OK」前往登入頁面，或按「Cancel」留在本頁。")) {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+        
+        const vehicleId = document.getElementById('transportType').value;
+        const distance = document.getElementById('distance').value;
+        const recordDate = document.getElementById('recordDate').value;
+
+        // 前端驗證
+        if (!vehicleId || !distance || !recordDate) {
+            alert("請完整填寫所有欄位！");
+            return;
+        }
+
+        const data = {
+            user_id: userId,
+            vehicle_id: vehicleId,
+            distance_km: distance,
+            usage_date: recordDate
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/records`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                alert(`儲存成功！本次產生碳排量：${result.data.carbon_emission} kg`);
+                // 儲存成功後清空距離，保留日期和交通工具方便使用者連續輸入
+                document.getElementById('distance').value = '';
+            } else {
+                alert("儲存失敗：" + (result.error || "未知錯誤"));
+            }
+        } catch (error) {
+            alert("無法連線至後端！請確保後端 app.py 有啟動喔！");
+            console.error(error);
+        }
+    }
+    
+</script>
+
 </body>
 </html>

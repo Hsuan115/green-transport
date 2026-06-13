@@ -14,10 +14,11 @@
     <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
         <h4 class="fw-bold text-dark mb-3">💬 客服意見回報系統</h4>
         <p class="text-muted small">使用過程中遇到任何問題嗎？歡迎填單回報給我們。</p>
-        <form onsubmit="event.preventDefault(); alert('回報已收到，我們將盡快處理！'); window.location.href='main.html';">
+        
+        <form onsubmit="submitFeedback(event)">
             <div class="mb-3">
-                <label class="form-label">您的問題反饋內容</label>
-                <textarea id="feedbackContent" class="form-control" rows="5" placeholder="請詳細敘述您遇到的系統狀況..." required></textarea>
+                <label class="form-label text-muted small">您的問題反饋內容</label>
+                <textarea id="feedbackMsg" class="form-control" rows="5" required placeholder="請在此輸入您的問題或建議..."></textarea>
             </div>
             <button type="submit" class="btn btn-primary w-100">送出回報並回主畫面</button>
         </form>
@@ -25,23 +26,51 @@
 </div>
 
 <script>
-    async function submitFeedback(event) {
-        event.preventDefault();
-        const content = document.getElementById('feedbackContent').value;
+    const API_BASE = 'http://127.0.0.1:3000/api';
+    const userId = localStorage.getItem('user_id');
+
+    async function submitFeedback(e) {
+        e.preventDefault();
+
+        // 驗證使用者是否已登入
+        const userId = localStorage.getItem('user_id');
+        if (!userId) {
+            if (confirm("您需要先登入帳號，才能執行這個操作喔！\n按「OK」前往登入頁面，或按「Cancel」留在本頁。")) {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        const message = document.getElementById('feedbackMsg').value;
+
+        if (!message.trim()) {
+            alert("請輸入反饋內容！");
+            return;
+        }
 
         try {
-            // 寫入資料庫 Feedback_Forms
-            const response = await fetch('/api/feedback', {
+            const response = await fetch(`${API_BASE}/feedback`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question_content: content })
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include', 
+                // 修正 2: 將 JSON 的 key 變更為 "question_content" 以符合後端預期
+                body: JSON.stringify({ question_content: message })
             });
-            
-            alert('回報已收到，我們將盡快處理！');
-            window.location.href = 'main.html';
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert("反饋已成功送出！謝謝您的寶貴意見。");
+                document.getElementById('feedbackMsg').value = ''; 
+                window.location.href = 'main.html'; // 成功後跳轉回主畫面
+            } else {
+                alert("送出失敗：" + (result.message || result.error || "未知錯誤"));
+            }
         } catch (error) {
-            alert('回報已收到，我們將盡快處理！');
-            window.location.href = 'main.html';
+            alert("無法連線至後端！請確保後端 app.py 有啟動喔！");
+            console.error("Feedback Error:", error);
         }
     }
 </script>
