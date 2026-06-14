@@ -32,15 +32,6 @@
     async function submitFeedback(e) {
         e.preventDefault();
 
-        // 驗證使用者是否已登入
-        const userId = localStorage.getItem('user_id');
-        if (!userId) {
-            if (confirm("您需要先登入帳號，才能執行這個操作喔！\n按「OK」前往登入頁面，或按「Cancel」留在本頁。")) {
-                window.location.href = 'index.html';
-            }
-            return;
-        }
-
         const message = document.getElementById('feedbackMsg').value;
 
         if (!message.trim()) {

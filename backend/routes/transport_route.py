@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from final.backend.database.db import get_db_connection  # 從自己的 database/db.py 匯入資料庫連線函式
+from database.db import get_db_connection  # 從自己的 database/db.py 匯入資料庫連線函式
 
 
 transport = Blueprint("transport", __name__)

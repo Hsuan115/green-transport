@@ -1,9 +1,9 @@
-﻿import calendar
+import calendar
 from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 
-from frontend.backend.database.db import get_db_connection
+from database.db import get_db_connection
 
 
 analysis = Blueprint("analysis", __name__)

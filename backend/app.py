@@ -1,11 +1,11 @@
-﻿from flask import Flask, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 
-from final.backend.routes.auth_route import auth
-from final.backend.routes.transport_route import transport
-from final.backend.routes.record_route import record
-from final.backend.routes.analysis_route import analysis
-from final.backend.routes.feedback_route import feedback
+from routes.auth_route import auth
+from routes.transport_route import transport
+from routes.record_route import record
+from routes.analysis_route import analysis
+from routes.feedback_route import feedback
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)

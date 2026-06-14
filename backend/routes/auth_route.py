@@ -3,7 +3,7 @@
 from flask import Blueprint  # Blueprint ：一組路由的分類資料夾（現在把登入相關 API 放在 auth_routes.py，就是用 Blueprint 讓 app.py 不用塞一堆 route）
 from flask import request, jsonify, session  # request：用來處理 HTTP 請求的資料，jsonify：用來將 Python 資料轉換成 JSON 格式，session：用來管理使用者的 session 資料
 
-from final.backend.database.db import get_db_connection  # 匯入資料庫連線函式（之後只要寫：conn = get_db_connection() 就可以連到 MySQL）
+from database.db import get_db_connection # 匯入資料庫連線函式（之後只要寫：conn = get_db_connection() 就可以連到 MySQL）
 
 # 建立一個 Blueprint，名字叫 auth
 # auth 是一組登入相關 API 的集合。之後在 app.py 裡面會用： app.register_blueprint(auth) 把這組 API 掛到 Flask 主程式上

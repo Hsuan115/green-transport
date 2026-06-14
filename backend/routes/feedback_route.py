@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request, jsonify, session
 
-from final.backend.database.db import get_db_connection
+from database.db import get_db_connection
 
 
 feedback = Blueprint("feedback", __name__)

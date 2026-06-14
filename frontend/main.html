@@ -12,8 +12,7 @@
 <nav class="navbar navbar-dark bg-success shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="main.html">🌱 碳足跡主畫面大廳</a>
-        <!-- 動態登入/登出按鈕 -->
-        <button id="authBtn" class="btn btn-outline-light">載入中...</button>
+        <button onclick="handleLogout()" class="btn btn-outline-light">登出</button>
     </div>
 </nav>
 
@@ -33,7 +32,7 @@
         <div class="col-md-8">
             <div class="p-3 bg-white rounded shadow-sm">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold text-success m-0" id="welcomeMsg">📊 個人減碳數據分析</h5>
+                    <h5 class="fw-bold text-success m-0">📊 個人減碳數據分析</h5>
                     <select class="form-select form-select-sm w-auto" id="rangeSelect" onchange="changeData()">
                         <option value="d">每日分析</option>
                         <option value="w">每週分析</option>
@@ -50,23 +49,8 @@
     const API_BASE = 'http://127.0.0.1:3000/api';
     let chart;
     let userId = localStorage.getItem('user_id');
-    let username = localStorage.getItem('username');
 
     window.onload = function() {
-        const authBtn = document.getElementById('authBtn');
-        const welcomeMsg = document.getElementById('welcomeMsg');
-
-        // 判斷按鈕要是「登入」還是「登出」
-        if (userId) {
-            authBtn.innerText = '登出';
-            authBtn.onclick = handleLogout;
-            welcomeMsg.innerText = `📊 ${username} 的減碳數據分析`;
-        } else {
-            authBtn.innerText = '登入';
-            authBtn.onclick = () => { window.location.href = 'index.html'; };
-            welcomeMsg.innerText = `📊 訪客的減碳數據分析 (請先登入)`;
-        }
-
         // 初始化 Chart.js
         const ctx = document.getElementById('mainChart').getContext('2d');
         chart = new Chart(ctx, {
@@ -82,10 +66,7 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        // 如果有登入，才抓取初始資料
-        if (userId) {
-            changeData();
-        }
+        changeData();
     };
 
     function getTodayString() {
@@ -97,8 +78,6 @@
     }
 
     async function changeData() {
-        if (!userId) return; // 沒登入就不執行查詢
-
         const val = document.getElementById('rangeSelect').value;
         const todayStr = getTodayString();
         
@@ -129,8 +108,6 @@
                 chart.data.datasets[0].data = emissions;
                 chart.data.datasets[0].label = labelsMap[val];
                 chart.update(); 
-            } else {
-                console.error('API Error:', result.error);
             }
         } catch (error) {
             console.error('Fetch Error:', error);

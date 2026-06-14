@@ -1,8 +1,8 @@
-﻿﻿from datetime import date
+﻿from datetime import date
 
 from flask import Blueprint, request, jsonify
 
-from final.backend.database.db import get_db_connection
+from database.db import get_db_connection
 
 record = Blueprint("record", __name__)
 
