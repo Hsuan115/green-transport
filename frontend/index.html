@@ -13,18 +13,23 @@
 <body>
     <div class="auth-card mt-5">
         <h3 class="text-center text-success fw-bold mb-4">🌱 交通碳足跡系統</h3>
+        
         <ul class="nav nav-pills nav-justified mb-4" id="pills-tab" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#login-view">會員登入</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#reg-view">帳號註冊</button></li>
         </ul>
+
         <div class="tab-content">
             <div class="tab-pane fade show active" id="login-view">
-                <form onsubmit="handleLogin(event)">
-                    <div class="mb-3"><label class="form-label">使用者帳號</label><input type="text" id="loginUser" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">密碼</label><input type="password" id="loginPwd" class="form-control" required></div>
-                    <button type="submit" class="btn btn-success w-100">立即登入</button>
-                </form>
+                <div id="login-form-area">
+                    <form onsubmit="handleLogin(event)">
+                        <div class="mb-3"><label class="form-label">使用者帳號</label><input type="text" id="loginUser" class="form-control" required></div>
+                        <div class="mb-3"><label class="form-label">密碼</label><input type="password" id="loginPwd" class="form-control" required></div>
+                        <button type="submit" class="btn btn-success w-100">立即登入</button>
+                    </form>
+                </div>
             </div>
+
             <div class="tab-pane fade" id="reg-view">
                 <form onsubmit="handleRegister(event)">
                     <div class="mb-3"><label class="form-label">設定帳號</label><input type="text" id="regUser" class="form-control" required></div>
@@ -38,32 +43,42 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    
-    // 定義後端 API 的基本網址，方便統一管理
     const API_BASE = 'http://127.0.0.1:3000/api';
 
-    // 網頁載入時，先檢查是否已經登入過
     window.onload = async function() {
         try {
             const response = await fetch(`${API_BASE}/me`, {
                 method: 'GET',
-                credentials: 'include' // 重要：讓瀏覽器帶上 session cookie，這樣後端才能認得你
+                credentials: 'include'
             });
             const result = await response.json();
             
             if (result.success) {
-                // 將使用者資訊存入 localStorage，方便其他頁面使用 (解決跨 API 傳遞 user_id 的問題)
+                // 確保 localStorage 有值
                 localStorage.setItem('user_id', result.user.id);
                 localStorage.setItem('username', result.user.name);
-                
-                // 已經登入過，直接跳轉到主畫面
-                window.location.href = 'main.html';
+
+                const loginFormArea = document.getElementById('login-form-area');
+                loginFormArea.innerHTML = `
+                    <div class="text-center p-3">
+                        <p class="text-success">您已登入為: <b>${result.user.name}</b></p>
+                        <a href="main.html" class="btn btn-success w-100 mb-2">進入主畫面</a>
+                        <button onclick="handleLogoutAndRefresh()" class="btn btn-link text-muted btn-sm">登出並重新登入</button>
+                    </div>
+                `;
             }
         } catch (err) {
-            console.log("尚未登入或後端未啟動", err);
+            console.log("尚未登入");
         }
     };
-    
+
+    async function handleLogoutAndRefresh() {
+        await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('username');
+        window.location.reload();
+    }
+
     async function handleLogin(e) {
         e.preventDefault();
         const user = document.getElementById('loginUser').value;
@@ -73,45 +88,35 @@
             const response = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', // 傳送登入資訊並儲存 Cookie
+                credentials: 'include',
                 body: JSON.stringify({ username: user, password: pwd })
             });
-            
             const result = await response.json();
             
             if (result.success) {
-                // 登入成功後，呼叫 /api/me 取得 user_id，以供其他需要 user_id 的 API 使用
-                const meResponse = await fetch(`${API_BASE}/me`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
+                // !!! 這裡最重要：登入成功後一定要把 user_id 存進 localStorage !!!
+                // 為了安全起見，我們再次呼叫 /me 來確認 ID
+                const meResponse = await fetch(`${API_BASE}/me`, { credentials: 'include' });
                 const meResult = await meResponse.json();
-                
                 if (meResult.success) {
                     localStorage.setItem('user_id', meResult.user.id);
                     localStorage.setItem('username', meResult.user.name);
                 }
-                
                 window.location.href = 'main.html';
             } else {
                 alert("登入失敗：" + result.message);
             }
         } catch (err) {
-            alert("無法連線至後端，請檢查 app.py 是否已執行");
+            alert("無法連線至後端");
         }
     }
-
-    // 處理註冊
     async function handleRegister(e) {
         e.preventDefault();
         const user = document.getElementById('regUser').value;
         const p1 = document.getElementById('p1').value;
         const p2 = document.getElementById('p2').value;
 
-        if (p1 !== p2) {
-            alert("兩次輸入的密碼不一致！");
-            return;
-        }
+        if (p1 !== p2) { alert("兩次密碼不一致！"); return; }
 
         try {
             const response = await fetch(`${API_BASE}/register`, {
@@ -120,25 +125,15 @@
                 credentials: 'include',
                 body: JSON.stringify({ username: user, password: p1 })
             });
-            
             const result = await response.json();
-            
             if (result.success) {
-                alert("註冊成功！請切換到登入頁面進行登入。");
-                document.getElementById('regUser').value = '';
-                document.getElementById('p1').value = '';
-                document.getElementById('p2').value = '';
-                // 自動切換回登入 tab
+                alert("註冊成功！");
                 document.querySelector('[data-bs-target="#login-view"]').click();
             } else {
                 alert("註冊失敗：" + result.message);
             }
-        } catch (err) {
-            console.error(err);
-            alert("無法連線至後端，請檢查 app.py 是否已執行");
-        }
+        } catch (err) { alert("連線錯誤"); }
     }
-
 </script>
 </body>
 </html>
