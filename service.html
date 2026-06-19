@@ -11,37 +11,112 @@
 <div class="container mt-4">
     <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
 
-    <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
+    <div class="card p-4 shadow-sm mx-auto mb-5" style="max-width: 600px;">
         <h4 class="fw-bold text-dark mb-3">💬 客服意見回報系統</h4>
-        <p class="text-muted small">使用過程中遇到任何問題嗎？歡迎填單回報給我們。</p>
-        <form onsubmit="event.preventDefault(); alert('回報已收到，我們將盡快處理！'); window.location.href='main.html';">
+        <form id="feedbackForm">
             <div class="mb-3">
-                <label class="form-label">您的問題反饋內容</label>
-                <textarea id="feedbackContent" class="form-control" rows="5" placeholder="請詳細敘述您遇到的系統狀況..." required></textarea>
+                <label class="form-label text-muted small">您的問題反饋內容</label>
+                <textarea id="feedbackMsg" class="form-control" rows="5" required placeholder="請在此輸入您的問題或建議..."></textarea>
             </div>
-            <button type="submit" class="btn btn-primary w-100">送出回報並回主畫面</button>
+            <button type="submit" class="btn btn-primary w-100">送出回報</button>
         </form>
+    </div>
+
+    <div class="card p-4 shadow-sm mx-auto mb-5" style="max-width: 600px;">
+        <h4 class="fw-bold text-dark mb-3">📋 我的回饋紀錄</h4>
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>內容</th>
+                    <th style="width: 80px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="feedbackBody">
+                <tr><td colspan="2" class="text-center">載入中...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
 <script>
-    async function submitFeedback(event) {
-        event.preventDefault();
-        const content = document.getElementById('feedbackContent').value;
+    const API_BASE = 'http://127.0.0.1:3000/api';
+
+    // 頁面載入時執行
+    window.onload = loadMyFeedback;
+
+    // 1. 取得回饋列表
+    async function loadMyFeedback() {
+        try {
+            const response = await fetch(`${API_BASE}/feedback/my`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            const result = await response.json();
+            const tbody = document.getElementById('feedbackBody');
+            tbody.innerHTML = '';
+
+            if (result.success && result.feedback.length > 0) {
+                result.feedback.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${item.question_content}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFeedback(${item.form_id})">刪除</button>
+                            </td>
+                        </tr>`;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">暫無回饋紀錄</td></tr>';
+            }
+        } catch (error) {
+            console.error("載入失敗:", error);
+        }
+    }
+
+    // 2. 處理表單提交
+    document.getElementById('feedbackForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const message = document.getElementById('feedbackMsg').value;
 
         try {
-            // 寫入資料庫 Feedback_Forms
-            const response = await fetch('/api/feedback', {
+            const response = await fetch(`${API_BASE}/feedback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question_content: content })
+                credentials: 'include',
+                body: JSON.stringify({ question_content: message })
+            });
+
+            const result = await response.json();
+            if (response.ok && result.success) {
+                alert("反饋已送出！");
+                document.getElementById('feedbackMsg').value = '';
+                loadMyFeedback(); // 提交後自動刷新列表
+            } else {
+                alert("送出失敗：" + (result.message || "未知錯誤"));
+            }
+        } catch (error) {
+            alert("無法連線至後端");
+        }
+    };
+
+    // 3. 刪除回饋
+    async function deleteFeedback(formId) {
+        if (!confirm("確定要刪除這筆回饋嗎？")) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/feedback/${formId}`, {
+                method: 'DELETE',
+                credentials: 'include'
             });
             
-            alert('回報已收到，我們將盡快處理！');
-            window.location.href = 'main.html';
+            if (response.ok) {
+                alert("刪除成功！");
+                loadMyFeedback(); // 刪除後自動刷新列表
+            } else {
+                alert("刪除失敗");
+            }
         } catch (error) {
-            alert('回報已收到，我們將盡快處理！');
-            window.location.href = 'main.html';
+            alert("網路錯誤");
         }
     }
 </script>
