@@ -31,18 +31,24 @@
 
 <script>
     const API_BASE = 'http://127.0.0.1:3000/api';
-    const userId = localStorage.getItem('user_id');
 
     window.onload = async function() {
+        // 檢查登入狀態
+        const userId = localStorage.getItem('user_id');
+        if (!userId) {
+            alert("您尚未登入或登入已過期，請重新登入。");
+            window.location.href = 'index.html';
+            return;
+        }
 
-        // 2. 預設日期為今天
+        // 預設日期為今天
         const today = new Date();
         const y = today.getFullYear();
         let m = String(today.getMonth() + 1).padStart(2, '0');
         let d = String(today.getDate()).padStart(2, '0');
         document.getElementById('recordDate').value = `${y}-${m}-${d}`;
 
-        // 3. 載入交通工具清單
+        // 載入交通工具清單
         await loadTransports();
     };
 
@@ -68,6 +74,14 @@
 
     // 儲存紀錄至資料庫
     async function saveRecord() {
+        // 在執行儲存時才抓取 user_id，確保讀取到當前狀態
+        const userId = localStorage.getItem('user_id');
+        
+        if (!userId) {
+            alert("錯誤：找不到使用者ID，請重新登入！");
+            window.location.href = 'index.html';
+            return;
+        }
         
         const vehicleId = document.getElementById('transportType').value;
         const distance = document.getElementById('distance').value;
@@ -97,7 +111,6 @@
 
             if (response.ok && result.status === 'success') {
                 alert(`儲存成功！本次產生碳排量：${result.data.carbon_emission} kg`);
-                // 儲存成功後清空距離，保留日期和交通工具方便使用者連續輸入
                 document.getElementById('distance').value = '';
             } else {
                 alert("儲存失敗：" + (result.error || "未知錯誤"));
@@ -107,8 +120,6 @@
             console.error(error);
         }
     }
-    
 </script>
-
 </body>
 </html>
