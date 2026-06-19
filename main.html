@@ -12,7 +12,7 @@
 <nav class="navbar navbar-dark bg-success shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="main.html">🌱 碳足跡主畫面大廳</a>
-        <a href="index.html" class="btn btn-outline-light">登出</a>
+        <button onclick="handleLogout()" class="btn btn-outline-light">登出</button>
     </div>
 </nav>
 
@@ -24,7 +24,7 @@
                 <div class="d-grid gap-3">
                     <a href="query_date.html" class="btn btn-outline-success py-3 fw-bold">📅 日期範圍查詢系統</a>
                     <a href="add_transport.html" class="btn btn-outline-success py-3 fw-bold">🚗 新增交通紀錄</a>
-                    <a href="service.html" class="btn btn-outline-secondary py-3 fw-bold">💬 客服反饋系統</a>
+                    <a href="service.html" class="btn btn-outline-success py-3 fw-bold">💬 客服反饋系統</a>
                 </div>
             </div>
         </div>
@@ -46,16 +46,20 @@
 </div>
 
 <script>
+    const API_BASE = 'http://127.0.0.1:3000/api';
     let chart;
+    let userId = localStorage.getItem('user_id');
+
     window.onload = function() {
+        // 初始化 Chart.js
         const ctx = document.getElementById('mainChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'bar',
             data: { 
-                labels: [], // 留空 動態填入日期
+                labels: [], 
                 datasets: [{ 
                     label: '碳排放 (kg)', 
-                    data: [], // 留空，動態填入碳排放數字
+                    data: [], 
                     backgroundColor: '#2e7d32' 
                 }] 
             },
@@ -65,38 +69,64 @@
         changeData();
     };
 
-    // 負責切換每日、每週、每月的函數
+    function getTodayString() {
+        const today = new Date();
+        const y = today.getFullYear();
+        let m = String(today.getMonth() + 1).padStart(2, '0');
+        let d = String(today.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
     async function changeData() {
         const val = document.getElementById('rangeSelect').value;
+        const todayStr = getTodayString();
+        
+        let endpoint = '';
+        let labelKey = '';
+        const labelsMap = { 'd': '每日碳排放 (kg)', 'w': '每週碳排放 (kg)', 'm': '每月碳排放 (kg)' };
+
+        if (val === 'd') {
+            endpoint = `/analysis/daily?user_id=${userId}&date=${todayStr}`;
+            labelKey = 'date';
+        } else if (val === 'w') {
+            endpoint = `/analysis/weekly?user_id=${userId}&date=${todayStr}`;
+            labelKey = 'week_label';
+        } else if (val === 'm') {
+            endpoint = `/analysis/monthly?user_id=${userId}&date=${todayStr}`;
+            labelKey = 'month';
+        }
 
         try {
-            // 串接 API，將時間維度參數送給後端
-            const response = await fetch(`/api/chart-data?range=${val}`);
-            const data = await response.json(); // 預期回傳 { labels: [...], emissions: [...] }
+            const response = await fetch(`${API_BASE}${endpoint}`);
+            const result = await response.json(); 
 
-            // 更新 Chart.js 資料
-            chart.data.labels = data.labels;
-            chart.data.datasets[0].data = data.emissions;
-            
-            // 依據時間動態改變圖例名稱
-            const labelsMap = { 'd': '每日碳排放 (kg)', 'w': '每週碳排放 (kg)', 'm': '每月碳排放 (kg)' };
-            chart.data.datasets[0].label = labelsMap[val];
+            if (response.ok && result.status === 'success') {
+                const labels = result.data.map(item => item[labelKey]);
+                const emissions = result.data.map(item => item.total);
 
-            chart.update(); // 重繪圖表
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = emissions;
+                chart.data.datasets[0].label = labelsMap[val];
+                chart.update(); 
+            }
         } catch (error) {
-            console.error('API Error:', error);
-            
-            // ⚠️ 在尚未建置後端 API 時的模擬(Mock)備用數據顯示
-            const mockData = {
-                'd': { labels: ['週一', '週二', '週三', '週四', '週五'], emissions: [1.2, 0.5, 2.3, 0.8, 3.1] },
-                'w': { labels: ['第1週', '第2週', '第3週', '第4週'], emissions: [15.5, 12.0, 18.2, 10.4] },
-                'm': { labels: ['一月', '二月', '三月', '四月', '五月'], emissions: [45.2, 50.1, 42.0, 38.5, 40.0] }
-            };
-            chart.data.labels = mockData[val].labels;
-            chart.data.datasets[0].data = mockData[val].emissions;
-            chart.update();
+            console.error('Fetch Error:', error);
         }
-        
+    }
+
+    async function handleLogout() {
+        try {
+            await fetch(`${API_BASE}/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (error) {
+            console.error("登出發生錯誤:", error);
+        } finally {
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('username');
+            window.location.href = 'index.html'; // 登出後跳轉回登入頁
+        }
     }
 </script>
 </body>
