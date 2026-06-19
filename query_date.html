@@ -12,75 +12,105 @@
     <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
 
     <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
-        <h4 class="fw-bold text-success mb-3">📅 日期範圍查詢</h4>
-        <p class="text-muted small">系統已自動預設篩選範圍為【當月】</p>
-        <div class="row g-3">
-            <div class="col-6">
-                <label class="form-label">開始日期</label>
-                <input type="date" id="start" class="form-control">
+        <h4 class="fw-bold text-dark mb-4">📅 日期範圍查詢</h4>
+        
+        <div class="row g-2 mb-3">
+            <div class="col">
+                <label class="form-label small text-muted">開始日期</label>
+                <input type="date" id="startDate" class="form-control">
             </div>
-            <div class="col-6">
-                <label class="form-label">結束日期</label>
-                <input type="date" id="end" class="form-control">
+            <div class="col">
+                <label class="form-label small text-muted">結束日期</label>
+                <input type="date" id="endDate" class="form-control">
             </div>
         </div>
-        <button class="btn btn-primary w-100 mt-4" onclick="doQuery()">執行日期篩選查詢</button>
-        <div id="res" class="mt-4"></div>
+        
+        <button class="btn btn-primary w-100 mb-4" onclick="doQuery()">開始查詢</button>
+        
+        <table class="table table-bordered table-hover text-center" id="resultTable" style="display:none;">
+            <thead class="table-success">
+                <tr>
+                    <th>日期</th>
+                    <th>交通工具</th>
+                    <th>距離 (km)</th>
+                    <th>碳排放 (kg)</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                <!-- 資料將動態插入此處 -->
+            </tbody>
+        </table>
+        
+        <div id="noDataMsg" class="text-center text-muted" style="display:none;">
+            查無資料
+        </div>
     </div>
 </div>
 
 <script>
-    window.onload = function() {
-        const today = new Date();
-        const y = today.getFullYear();
-        let m = String(today.getMonth() + 1).padStart(2, '0');
-        let d = String(today.getDate()).padStart(2, '0');
-        document.getElementById('start').value = `${y}-${m}-01`; // 當月1號
-        document.getElementById('end').value = `${y}-${m}-${d}`;    // 今天
-    };
+    const API_BASE = 'http://127.0.0.1:3000/api';
+    
+    // 查詢並顯示資料
     async function doQuery() {
-        const s = document.getElementById('start').value;
-        const e = document.getElementById('end').value;
-        const resDiv = document.getElementById('res');
-
-        // 前端驗證
-        if (!s || !e) {
-            alert('請選擇完整的開始與結束日期！');
-            return;
-        }
-        if (new Date(s) > new Date(e)) {
-            alert('開始日期不能大於結束日期！');
-            return;
-        }
-
-        resDiv.innerHTML = `<div class="alert alert-info">正在為您撈取自 ${s} 到 ${e} 的歷史排碳資料...</div>`;
+        const userId = localStorage.getItem('user_id');
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const tbody = document.getElementById('resultBody');
+        const table = document.getElementById('resultTable');
+        
+        if(!start || !end) return alert("請選擇日期範圍");
 
         try {
-            // 串接 API 取得 Traffic_Records 資料
-            const response = await fetch(`/api/records/date-range?start=${s}&end=${e}`);
-            const data = await response.json(); // 假設回傳格式包含 totalEmission 與 records 陣列
+            // 注意：這裡加上 credentials: 'include' 確保 session 被傳遞
+            const res = await fetch(`${API_BASE}/records?user_id=${userId}&start=${start}&end=${end}`, {
+                credentials: 'include'
+            });
+            const result = await res.json();
             
-            // 顯示查詢結果與表格
-            let html = `<div class="alert alert-success">查詢成功！該期間總碳排放量為：<strong>${data.totalEmission} kg</strong></div>`;
-            html += `<table class="table table-bordered table-striped text-center">
-                        <thead class="table-success">
-                            <tr><th>日期</th><th>交通工具</th><th>里程(km)</th><th>碳排(kg)</th></tr>
-                        </thead><tbody>`;
-            
-            if(data.records && data.records.length > 0) {
-                data.records.forEach(r => {
-                    html += `<tr><td>${r.usage_date}</td><td>${r.vehicle_name}</td><td>${r.distance_km}</td><td>${r.carbon_emission}</td></tr>`;
+            tbody.innerHTML = '';
+            if (result.status === 'success' && result.data.length > 0) {
+                table.style.display = 'table';
+                result.data.forEach(item => {
+                    const row = `
+                        <tr>
+                            <td>${item.usage_date}</td>
+                            <td>${item.vehicle_name}</td>
+                            <td>${item.distance_km}</td>
+                            <td>${item.carbon_emission}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteRecord(${item.record_id})">刪除</button>
+                            </td>
+                        </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
                 });
             } else {
-                html += `<tr><td colspan="4" class="text-muted">此區間查無資料</td></tr>`;
+                alert("查無資料");
+                table.style.display = 'none';
             }
-            html += `</tbody></table>`;
-            resDiv.innerHTML = html;
+        } catch (e) { alert("查詢失敗，請檢查後端是否啟動"); }
+    }
 
-        } catch (error) {
-            console.error('API Error:', error);
-            resDiv.innerHTML = `<div class="alert alert-danger">資料載入失敗，或後端未啟動。</div>`;
-        }
+    // 刪除邏輯：完整版
+    async function deleteRecord(recordId) {
+    	if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+
+    	try {
+        	// 確保路徑是 /api/records/ 後面接 ID
+        	const response = await fetch(`${API_BASE}/records/${recordId}`, {
+            		method: 'DELETE',
+            		credentials: 'include' // 必須要有，否則會 401
+            	});
+        
+        	if (response.ok) {
+            		alert("刪除成功！");
+            		doQuery(); // 重新整理列表
+        	} else {
+            		const err = await response.json();
+            		alert("刪除失敗：" + err.message);
+        	}
+    	} catch (e) {
+        	alert("連線錯誤，請檢查後端是否正常運作。");
+    	}
     }
 </script>
 </body>
