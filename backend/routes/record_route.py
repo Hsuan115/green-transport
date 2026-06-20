@@ -132,3 +132,43 @@ def get_records_by_date():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+# 刪除單筆交通紀錄
+@record.route("/api/records/<int:record_id>", methods=["DELETE"])
+def delete_record(record_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 執行 SQL 刪除指令
+        cursor.execute(
+            """
+            DELETE FROM Traffic_Records
+            WHERE record_id = %s
+            """,
+            (record_id,)
+        )
+        
+        conn.commit()
+        
+        # 取得被刪除的資料筆數
+        deleted_count = cursor.rowcount
+
+        cursor.close()
+        conn.close()
+
+        # 如果筆數為 0，代表沒找到該紀錄
+        if deleted_count == 0:
+            return jsonify({
+                "status": "error",
+                "message": "找不到該筆紀錄"
+            }), 404
+
+        return jsonify({
+            "status": "success",
+            "message": "刪除成功"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
