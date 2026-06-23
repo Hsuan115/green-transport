@@ -17,6 +17,7 @@
         <ul class="nav nav-pills nav-justified mb-4" id="pills-tab" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#login-view">會員登入</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#reg-view">帳號註冊</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#forgot-view">忘記密碼</button></li>
         </ul>
 
         <div class="tab-content">
@@ -36,6 +37,24 @@
                     <div class="mb-3"><label class="form-label">密碼</label><input type="password" id="p1" class="form-control" required></div>
                     <div class="mb-3"><label class="form-label">確認密碼</label><input type="password" id="p2" class="form-control" required></div>
                     <button type="submit" class="btn btn-outline-success w-100">完成註冊</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="forgot-view">
+                <form onsubmit="handleResetPassword(event)">
+                    <div class="mb-3">
+                        <label class="form-label">使用者帳號</label>
+                        <input type="text" id="resetUser" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">新密碼</label>
+                        <input type="password" id="resetPwd1" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">確認新密碼</label>
+                        <input type="password" id="resetPwd2" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 text-dark fw-bold">重設密碼</button>
                 </form>
             </div>
         </div>
@@ -94,14 +113,10 @@
             const result = await response.json();
             
             if (result.success) {
-                // !!! 這裡最重要：登入成功後一定要把 user_id 存進 localStorage !!!
-                // 為了安全起見，我們再次呼叫 /me 來確認 ID
-                const meResponse = await fetch(`${API_BASE}/me`, { credentials: 'include' });
-                const meResult = await meResponse.json();
-                if (meResult.success) {
-                    localStorage.setItem('user_id', meResult.user.id);
-                    localStorage.setItem('username', meResult.user.name);
-                }
+                // 直接使用登入 API 回傳的 user 資料，不再呼叫 /me，完美避開瀏覽器快取問題！
+                localStorage.setItem('user_id', result.user.id);
+                localStorage.setItem('username', result.user.name);
+                
                 window.location.href = 'main.html';
             } else {
                 alert("登入失敗：" + result.message);
@@ -110,6 +125,8 @@
             alert("無法連線至後端");
         }
     }
+
+    
     async function handleRegister(e) {
         e.preventDefault();
         const user = document.getElementById('regUser').value;
@@ -133,6 +150,43 @@
                 alert("註冊失敗：" + result.message);
             }
         } catch (err) { alert("連線錯誤"); }
+    }
+
+
+    async function handleResetPassword(e) {
+        e.preventDefault();
+        const user = document.getElementById('resetUser').value;
+        const p1 = document.getElementById('resetPwd1').value;
+        const p2 = document.getElementById('resetPwd2').value;
+
+        if (p1 !== p2) { 
+            alert("兩次新密碼不一致！"); 
+            return; 
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/reset_password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username: user, new_password: p1 })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                alert("密碼重設成功！請使用新密碼重新登入。");
+                // 清空輸入框
+                document.getElementById('resetUser').value = '';
+                document.getElementById('resetPwd1').value = '';
+                document.getElementById('resetPwd2').value = '';
+                // 自動切換回登入分頁
+                document.querySelector('[data-bs-target="#login-view"]').click();
+            } else {
+                alert("重設失敗：" + result.message);
+            }
+        } catch (err) { 
+            alert("連線錯誤"); 
+        }
     }
 </script>
 </body>

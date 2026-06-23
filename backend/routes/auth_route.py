@@ -143,7 +143,7 @@ def login():
             "message": "密碼錯誤"
         }), 401
 
-    # 登入成功後，把 "使用者 ID"、"使用者名稱" 存進 session，這樣之後就可以知道目前是誰登入了
+    # 登入成功後，把 "使用者 ID"、"使用者名稱" 存進 session
     session["user_id"] = user["user_id"]
     session["username"] = user["username"]
 
@@ -151,10 +151,14 @@ def login():
     cursor.close()
     conn.close()
 
-    # 回傳登入成功的訊息給前端(格式是 JSON，裡面 success 是 True)
+    # --- 這裡必須加上 user 資訊 ---
     return jsonify({
         "success": True,
-        "message": "登入成功"
+        "message": "登入成功",
+        "user": {
+            "id": user["user_id"],
+            "name": user["username"]
+        }
     })
 
 
@@ -192,3 +196,58 @@ def me():
             "name": session["username"]
         }
     })
+
+
+# 5. 重設密碼 API (忘記密碼)
+@auth.route("/api/reset_password", methods=["PUT"])
+def reset_password():
+    data = request.get_json()
+
+    username = data.get("username")
+    new_password = data.get("new_password")
+
+    if not username or not new_password:
+        return jsonify({
+            "success": False,
+            "message": "請輸入完整資訊"
+        }), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # 檢查使用者是否存在
+    cursor.execute(
+        "SELECT * FROM Users WHERE username=%s",
+        (username,)
+    )
+    user = cursor.fetchone()
+
+    if not user:
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "success": False,
+            "message": "找不到此帳號"
+        }), 404
+    
+    # 更新密碼
+    cursor.execute(
+        """
+        UPDATE Users 
+        SET user_password=%s 
+        WHERE username=%s
+        """,
+        (new_password, username)
+    )
+
+    conn.commit()
+
+    # 關閉 cursor 和資料庫連線
+    cursor.close()
+    conn.close()
+
+    # --- 恢復成單純的回傳重設成功訊息 ---
+    return jsonify({
+        "success": True,
+        "message": "密碼重設成功"
+    })  

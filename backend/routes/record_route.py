@@ -84,20 +84,20 @@ def add_record():
         return jsonify({"error": str(e)}), 500
 
 
-# 用日期範圍查詢交通紀錄
-@record.route("/api/records", methods=["GET"])
-def get_records_by_date():
+# 用交通工具名稱查詢交通紀錄
+@record.route("/api/records/vehicle", methods=["GET"])
+def get_records_by_vehicle():
     try:
         user_id = request.args.get("user_id")
-        start_date = request.args.get("start")
-        end_date = request.args.get("end")
+        vehicle_name = request.args.get("vehicle_name")
 
-        if not user_id or not start_date or not end_date:
-            return jsonify({"error": "缺少使用者、開始日期或結束日期"}), 400
+        if not user_id or not vehicle_name:
+            return jsonify({"error": "缺少使用者或交通工具名稱"}), 400
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
+        # 使用 LIKE 進行模糊搜尋，讓使用者只輸入部分字詞（例如"車"）也能查到
         cursor.execute(
             """
             SELECT
@@ -109,10 +109,10 @@ def get_records_by_date():
             FROM Traffic_Records tr
             JOIN Vehicles v ON tr.vehicle_id = v.vehicle_id
             WHERE tr.user_id = %s
-              AND tr.usage_date BETWEEN %s AND %s
+              AND v.vehicle_name LIKE %s
             ORDER BY tr.usage_date ASC
             """,
-            (user_id, start_date, end_date)
+            (user_id, f"%{vehicle_name}%")
         )
         records = cursor.fetchall()
 
@@ -133,7 +133,7 @@ def get_records_by_date():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-
+    
 # 刪除單筆交通紀錄
 @record.route("/api/records/<int:record_id>", methods=["DELETE"])
 def delete_record(record_id):

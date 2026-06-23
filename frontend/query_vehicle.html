@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交通工具名稱查詢</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+    <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
+
+    <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
+        <h4 class="fw-bold text-dark mb-4">🔍 交通工具名稱查詢</h4>
+        
+        <div class="mb-3">
+            <label class="form-label small text-muted">請輸入交通工具名稱 (可模糊搜尋)</label>
+            <input type="text" id="vehicleName" class="form-control" placeholder="例如：汽車、機車、捷運">
+        </div>
+        
+        <button class="btn btn-primary w-100 mb-4" onclick="doQuery()">開始查詢</button>
+        
+        <table class="table table-bordered table-hover text-center" id="resultTable" style="display:none;">
+            <thead class="table-success">
+                <tr>
+                    <th>日期</th>
+                    <th>交通工具</th>
+                    <th>距離 (km)</th>
+                    <th>碳排放 (kg)</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                </tbody>
+        </table>
+        
+        <div id="noDataMsg" class="text-center text-muted" style="display:none;">
+            查無資料
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://127.0.0.1:3000/api';
+    
+    // 查詢並顯示資料
+    async function doQuery() {
+        const userId = localStorage.getItem('user_id');
+        const vehicleName = document.getElementById('vehicleName').value.trim();
+        const tbody = document.getElementById('resultBody');
+        const table = document.getElementById('resultTable');
+        const noDataMsg = document.getElementById('noDataMsg');
+        
+        if(!vehicleName) return alert("請輸入交通工具名稱");
+
+        try {
+            // 呼叫我們剛剛在後端新增的 API
+            const res = await fetch(`${API_BASE}/records/vehicle?user_id=${userId}&vehicle_name=${encodeURIComponent(vehicleName)}`, {
+                credentials: 'include'
+            });
+            const result = await res.json();
+            
+            tbody.innerHTML = '';
+            if (result.status === 'success' && result.data.length > 0) {
+                table.style.display = 'table';
+                noDataMsg.style.display = 'none';
+                
+                result.data.forEach(item => {
+                    const row = `
+                        <tr>
+                            <td>${item.usage_date}</td>
+                            <td>${item.vehicle_name}</td>
+                            <td>${item.distance_km}</td>
+                            <td>${item.carbon_emission}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteRecord(${item.record_id})">刪除</button>
+                            </td>
+                        </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
+            } else {
+                table.style.display = 'none';
+                noDataMsg.style.display = 'block';
+            }
+        } catch (e) { 
+            alert("查詢失敗，請檢查後端是否啟動"); 
+            console.error(e);
+        }
+    }
+
+    // 刪除邏輯：與原本相同，刪除完後自動重新查詢
+    async function deleteRecord(recordId) {
+        if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/records/${recordId}`, {
+                method: 'DELETE',
+                credentials: 'include' 
+            });
+        
+            if (response.ok) {
+                alert("刪除成功！");
+                doQuery(); // 刪除後自動重新查詢並更新畫面
+            } else {
+                const err = await response.json();
+                alert("刪除失敗：" + err.message);
+            }
+        } catch (e) {
+            alert("連線錯誤，請檢查後端是否正常運作。");
+        }
+    }
+</script>
+</body>
+</html>
