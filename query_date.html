@@ -2,115 +2,90 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>日期範圍查詢</title>
+    <title>日期與關鍵字查詢</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
 <div class="container mt-4">
-    <div class="mb-4"><a href="main.html" class="btn btn-success">⬅ 回主畫面</a></div>
+    <div class="mb-4"><a href="main.html" class="btn btn-secondary">⬅ 回主畫面</a></div>
 
-    <div class="card p-4 shadow-sm mx-auto" style="max-width: 600px;">
-        <h4 class="fw-bold text-dark mb-4">📅 日期範圍查詢</h4>
+    <div class="card p-4 shadow-sm">
+        <h4 class="fw-bold mb-3">🔍 碳排紀錄查詢</h4>
         
         <div class="row g-2 mb-3">
-            <div class="col">
+            <div class="col-md-3">
                 <label class="form-label small text-muted">開始日期</label>
                 <input type="date" id="startDate" class="form-control">
             </div>
-            <div class="col">
+            <div class="col-md-3">
                 <label class="form-label small text-muted">結束日期</label>
                 <input type="date" id="endDate" class="form-control">
             </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted">關鍵字 (如：捷運、機車)</label>
+                <input type="text" id="keyword" class="form-control" placeholder="輸入搜尋關鍵字...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="doQuery()">查詢</button>
+            </div>
         </div>
-        
-        <button class="btn btn-primary w-100 mb-4" onclick="doQuery()">開始查詢</button>
-        
-        <table class="table table-bordered table-hover text-center" id="resultTable" style="display:none;">
-            <thead class="table-success">
-                <tr>
-                    <th>日期</th>
-                    <th>交通工具</th>
-                    <th>距離 (km)</th>
-                    <th>碳排放 (kg)</th>
-                </tr>
+
+        <table class="table table-hover mt-3" id="resultTable" style="display:none;">
+            <thead class="table-light">
+                <tr><th>日期</th><th>工具</th><th>km</th><th>碳排(kg)</th></tr>
             </thead>
-            <tbody id="resultBody">
-                <!-- 資料將動態插入此處 -->
-            </tbody>
+            <tbody id="resultBody"></tbody>
         </table>
-        
-        <div id="noDataMsg" class="text-center text-muted" style="display:none;">
-            查無資料
-        </div>
+        <div id="noDataMsg" class="text-center text-muted mt-3" style="display:none;">無符合條件的查詢紀錄。</div>
     </div>
 </div>
 
 <script>
     const API_BASE = 'http://127.0.0.1:3000/api';
-    
-    // 查詢並顯示資料
+
     async function doQuery() {
-        const userId = localStorage.getItem('user_id');
+        const uid = localStorage.getItem('user_id');
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
-        const tbody = document.getElementById('resultBody');
-        const table = document.getElementById('resultTable');
+        const keyword = document.getElementById('keyword').value;
         
-        if(!start || !end) return alert("請選擇日期範圍");
-
+        if (!uid) { alert("請先登入"); return; }
+        
+        // 組合查詢網址，加入 keyword 參數
+        const url = `${API_BASE}/records?user_id=${uid}&start=${start}&end=${end}&keyword=${encodeURIComponent(keyword)}`;
+        
         try {
-            // 注意：這裡加上 credentials: 'include' 確保 session 被傳遞
-            const res = await fetch(`${API_BASE}/records?user_id=${userId}&start=${start}&end=${end}`, {
-                credentials: 'include'
-            });
+            const res = await fetch(url);
             const result = await res.json();
             
-            tbody.innerHTML = '';
-            if (result.status === 'success' && result.data.length > 0) {
-                table.style.display = 'table';
-                result.data.forEach(item => {
-                    const row = `
+            const tbody = document.getElementById('resultBody');
+            const table = document.getElementById('resultTable');
+            const noData = document.getElementById('noDataMsg');
+            
+            if (result.status === 'success' && result.records) {
+                if (result.records.length > 0) {
+                    table.style.display = 'table';
+                    noData.style.display = 'none';
+                    tbody.innerHTML = result.records.map(r => `
                         <tr>
-                            <td>${item.usage_date}</td>
-                            <td>${item.vehicle_name}</td>
-                            <td>${item.distance_km}</td>
-                            <td>${item.carbon_emission}</td>
-                            <td>
-                                <button class="btn btn-sm btn-danger" onclick="deleteRecord(${item.record_id})">刪除</button>
-                            </td>
-                        </tr>`;
-                    tbody.insertAdjacentHTML('beforeend', row);
-                });
+                            <td>${r.usage_date}</td>
+                            <td>${r.vehicle_name}</td>
+                            <td>${r.distance_km}</td>
+                            <td>${r.carbon_emission.toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    table.style.display = 'none';
+                    noData.style.display = 'block';
+                }
             } else {
-                alert("查無資料");
-                table.style.display = 'none';
+                alert("查詢失敗: " + (result.error || "未知錯誤"));
             }
-        } catch (e) { alert("查詢失敗，請檢查後端是否啟動"); }
-    }
-
-    // 刪除邏輯：完整版
-    async function deleteRecord(recordId) {
-    	if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-
-    	try {
-        	// 確保路徑是 /api/records/ 後面接 ID
-        	const response = await fetch(`${API_BASE}/records/${recordId}`, {
-            		method: 'DELETE',
-            		credentials: 'include' // 必須要有，否則會 401
-            	});
-        
-        	if (response.ok) {
-            		alert("刪除成功！");
-            		doQuery(); // 重新整理列表
-        	} else {
-            		const err = await response.json();
-            		alert("刪除失敗：" + err.message);
-        	}
-    	} catch (e) {
-        	alert("連線錯誤，請檢查後端是否正常運作。");
-    	}
+        } catch (err) {
+            console.error(err);
+            alert("連線失敗，請確保後端服務已啟動。");
+        }
     }
 </script>
 </body>
