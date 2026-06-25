@@ -84,6 +84,58 @@ def add_record():
         return jsonify({"error": str(e)}), 500
 
 
+# 用日期範圍查詢交通紀錄
+@record.route("/api/records", methods=["GET"])
+def get_records_by_date():
+    try:
+        user_id = request.args.get("user_id")
+        start_date = request.args.get("start")
+        end_date = request.args.get("end")
+
+        if not user_id or not start_date or not end_date:
+            return jsonify({"error": "缺少必要參數 (user_id, start, end)"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # 查詢指定使用者的日期區間紀錄，並關聯 Vehicles 表格以取得交通工具名稱
+        cursor.execute(
+            """
+            SELECT
+                tr.record_id,
+                tr.usage_date,
+                v.vehicle_name,
+                tr.distance_km,
+                tr.carbon_emission
+            FROM Traffic_Records tr
+            JOIN Vehicles v ON tr.vehicle_id = v.vehicle_id
+            WHERE tr.user_id = %s
+              AND tr.usage_date BETWEEN %s AND %s
+            ORDER BY tr.usage_date ASC
+            """,
+            (user_id, start_date, end_date)
+        )
+        records = cursor.fetchall()
+
+        # 格式化資料
+        for row in records:
+            row["usage_date"] = row["usage_date"].strftime("%Y-%m-%d")
+            row["distance_km"] = float(row["distance_km"])
+            row["carbon_emission"] = float(row["carbon_emission"])
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "status": "success",
+            "message": f"成功查詢到 {len(records)} 筆紀錄",
+            "data": records
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # 用交通工具名稱查詢交通紀錄
 @record.route("/api/records/vehicle", methods=["GET"])
 def get_records_by_vehicle():
